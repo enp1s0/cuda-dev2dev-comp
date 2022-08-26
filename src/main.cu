@@ -22,7 +22,7 @@ void simple_copy(
     const std::size_t size,
     cudaStream_t cuda_stream = 0
     ) {
-  const auto block_size = std::min(256lu, size);
+  const auto block_size = 1024;
   if (size % 16  == 0) {
     const auto count = size / 16;
     using data_t = ulong2;
