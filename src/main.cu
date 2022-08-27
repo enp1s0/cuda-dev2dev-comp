@@ -167,7 +167,7 @@ double measure_time(
 }
 
 int main() {
-  std::printf("n,size_offset,size,cudaMemcpy_time,cudaMemcpy_bw,copy_kernel_time,copy_kernel_bw\n");
+  std::printf("n,size_offset,size,cudaMemcpy_time,cudaMemcpy_bw,copy_kernel_time,copy_kernel_bw,block_copy_kernel_time,block_copy_kernel_bw\n");
 
   for (const auto offset : std::vector<int>{0, -1, -2, 1, 2}) {
     for (std::uint32_t n = 0; n <= 30; n++) {
