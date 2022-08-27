@@ -112,7 +112,7 @@ void simple_block_copy(
     cudaStream_t cuda_stream = 0
     ) {
   const auto block_size = 256;
-	const auto grid_size = [block_size](const std::size_t count) {return (count + block_size - 1) / block_size;};
+	const auto grid_size = [block_size](const std::size_t count) {return ((count + block_size - 1) / block_size + COPY_BLOCK_SIZE - 1) / COPY_BLOCK_SIZE;};
   if (size % 16  == 0) {
     const auto count = size / 16;
     using data_t = ulong2;
@@ -141,6 +141,7 @@ double measure_time(
     const std::size_t size,
     const Func func
     ) {
+  const auto test_count = 100;
   void *dst_ptr, *src_ptr;
   cudaMalloc(&dst_ptr, size);
   cudaMalloc(&src_ptr, size);
@@ -150,12 +151,14 @@ double measure_time(
   CUDA_CHECK_ERROR(cudaDeviceSynchronize());
   const auto start_clock = std::chrono::system_clock::now();
 
-  func(dst_ptr, src_ptr, size);
+  for (std::uint32_t i = 0; i < test_count ; i++) {
+    func(dst_ptr, src_ptr, size);
+  }
 
   CUDA_CHECK_ERROR(cudaDeviceSynchronize());
   const auto end_clock = std::chrono::system_clock::now();
 
-  const auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_clock - start_clock).count() * 1e-9;
+  const auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_clock - start_clock).count() * 1e-9 / test_count;
 
   cudaFree(dst_ptr);
   cudaFree(src_ptr);
@@ -173,18 +176,18 @@ int main() {
       const auto size = base_size + offset;
       const auto cudaMemcpy_time        = measure_time(size + 1, [](void* const dst_ptr, const void* const src_ptr, const std::size_t size){cudaMemcpy(dst_ptr, src_ptr, size, cudaMemcpyDeviceToDevice);});
       const auto copy_kernel_time       = measure_time(size + 1, [](void* const dst_ptr, const void* const src_ptr, const std::size_t size){simple_copy(dst_ptr, src_ptr, size);});
-      const auto block_copy_kernel_time = measure_time(size + 1, [](void* const dst_ptr, const void* const src_ptr, const std::size_t size){simple_block_copy<2>(dst_ptr, src_ptr, size);});
+      const auto block_copy_kernel_time = measure_time(size + 1, [](void* const dst_ptr, const void* const src_ptr, const std::size_t size){simple_block_copy<4>(dst_ptr, src_ptr, size);});
       std::printf(
           "%u,%d,%lu,%e,%e,%e,%e,%e,%e\n",
           n,
           offset,
           size,
           cudaMemcpy_time,
-          size / cudaMemcpy_time,
+          2 * size / cudaMemcpy_time,
           copy_kernel_time,
-          size / copy_kernel_time,
+          2 * size / copy_kernel_time,
           block_copy_kernel_time,
-          size / block_copy_kernel_time
+          2 * size / block_copy_kernel_time
           );
       std::fflush(stdout);
     }
