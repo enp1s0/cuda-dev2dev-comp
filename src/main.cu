@@ -1,6 +1,26 @@
 #include <iostream>
 #include <chrono>
 #include <vector>
+#include <sstream>
+#include <stdexcept>
+
+inline void cuda_check_error(cudaError_t error, const std::string filename, const std::size_t line, const std::string funcname, const std::string message = ""){
+	if(error != cudaSuccess){
+		std::stringstream ss;
+		ss << cudaGetErrorString( error );
+		if(message.length() != 0){
+			ss << " : " << message;
+		}
+		ss << " [" << filename << ":" << line << " in " << funcname << "]";
+		throw std::runtime_error(ss.str());
+	}
+}
+#ifndef CUDA_CHECK_ERROR
+#define CUDA_CHECK_ERROR(status) cuda_check_error(status, __FILE__, __LINE__, __func__)
+#endif
+#ifndef CUDA_CHECK_ERROR_M
+#define CUDA_CHECK_ERROR_M(status, message) cuda_check_error(status, __FILE__, __LINE__, __func__, message)
+#endif
 
 template <class T>
 __global__ void simple_copy_kernel(
